@@ -31,15 +31,26 @@ void q_free(struct list_head *l)
 {
     if (!l)
         return;
-    struct list_head *node;
-    struct list_head *safe;
-    list_for_each_safe (node, safe, l) {
-        element_t *to_free = list_entry(node, element_t, list);
-        list_del(&to_free->list);
-        free(to_free->value);
-        free(to_free);
+    element_t *entry, *safe;
+    list_for_each_entry_safe (entry, safe, l, list) {
+        free(entry->value);
+        free(entry);
     }
     free(l);
+}
+
+element_t *create_new_element(char *s)
+{
+    element_t *new_element = malloc(sizeof(element_t));
+    if (!new_element)
+        return NULL;
+    new_element->value = strdup(s);
+    if (!new_element->value) {
+        free(new_element);
+        return NULL;
+    }
+    INIT_LIST_HEAD(&new_element->list);
+    return new_element;
 }
 
 /* Insert an element at head of queue */
@@ -47,15 +58,9 @@ bool q_insert_head(struct list_head *head, char *s)
 {
     if (!head)
         return false;
-    element_t *new_element = malloc(sizeof(element_t));
+    element_t *new_element = create_new_element(s);
     if (!new_element)
         return false;
-    INIT_LIST_HEAD(&new_element->list);
-    new_element->value = strdup(s);
-    if (!new_element->value) {
-        free(new_element);
-        return false;
-    }
     list_add(&new_element->list, head);
     return true;
 }
@@ -65,15 +70,9 @@ bool q_insert_tail(struct list_head *head, char *s)
 {
     if (!head)
         return false;
-    element_t *new_element = malloc(sizeof(element_t));
+    element_t *new_element = create_new_element(s);
     if (!new_element)
         return false;
-    INIT_LIST_HEAD(&new_element->list);
-    new_element->value = strdup(s);
-    if (!new_element->value) {
-        free(new_element);
-        return false;
-    }
     list_add_tail(&new_element->list, head);
     return true;
 }
@@ -135,6 +134,32 @@ bool q_delete_mid(struct list_head *head)
 bool q_delete_dup(struct list_head *head)
 {
     // https://leetcode.com/problems/remove-duplicates-from-sorted-list-ii/
+    if (!head || list_empty(head))
+        return false;
+    element_t *entry, *safe;
+    bool add_entry = false;
+    list_for_each_entry_safe (entry, safe, head, list) {
+        if (&safe->list == head)
+            break;
+        if (!strcmp(entry->value, safe->value)) {
+            add_entry = true;
+            list_del(&entry->list);
+            free(entry->value);
+            free(entry);
+        } else {
+            if (add_entry) {
+                list_del(&entry->list);
+                free(entry->value);
+                free(entry);
+            }
+            add_entry = false;
+        }
+    }
+    if (add_entry) {
+        list_del(&entry->list);
+        free(entry->value);
+        free(entry);
+    }
     return true;
 }
 
