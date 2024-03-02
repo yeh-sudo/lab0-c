@@ -1,3 +1,4 @@
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -166,22 +167,12 @@ bool q_delete_dup(struct list_head *head)
 /* Swap every two adjacent nodes */
 void q_swap(struct list_head *head)
 {
-    if (!head || list_empty(head)) {
+    if (!head || list_empty(head) || list_is_singular(head))
         return;
-    }
     struct list_head *node;
-    for (node = head->next; node != head; node = node->next) {
-        if (node->next == head) {
-            break;
-        }
-        struct list_head *next = node->next;
-        node->next = next->next;
-        if (node->prev == head) {
-            head->next = next;
-        }
-        next->prev = node->prev;
-        node->prev = next;
-        next->next = node;
+    for (node = head->next; node != head && node->next != head;
+         node = node->next) {
+        list_move(node, node->next);
     }
 }
 
@@ -191,11 +182,10 @@ void q_reverse(struct list_head *head)
     if (!head || list_empty(head)) {
         return;
     }
-    struct list_head *node;
-    for (node = head; node != head; node = node->prev) {
-        struct list_head *next = node->next;
-        node->next = node->prev;
-        node->prev = next;
+    struct list_head *node, *safe;
+    list_for_each_safe (node, safe, head) {
+        list_del_init(node);
+        list_add(node, head);
     }
 }
 
@@ -224,8 +214,48 @@ void q_reverseK(struct list_head *head, int k)
     list_splice(tmp_head, head);
 }
 
+/**
+ * if s1 == s2: return 0
+ * if s1 > s2: return positive
+ * if s1 < s2: return negative
+ */
+bool cmp(const char *s1, const char *s2)
+{
+    return strcmp(s1, s2) > 0 ? true : false;
+}
+
+void mergeTwoLists(struct list_head *L1, struct list_head *L2, bool descend)
+{
+    if (!L1 || !L2)
+        return;
+    struct list_head head;
+    INIT_LIST_HEAD(&head);
+    while (!list_empty(L1) && !list_empty(L2)) {
+        element_t *e1 = list_first_entry(L1, element_t, list);
+        element_t *e2 = list_first_entry(L2, element_t, list);
+        struct list_head *node =
+            !(cmp(e1->value, e2->value) ^ descend) ? L1->next : L2->next;
+        list_move_tail(node, &head);
+    }
+    list_splice_tail_init(list_empty(L1) ? L2 : L1, &head);
+    list_splice(&head, L1);
+}
+
 /* Sort elements of queue in ascending/descending order */
-void q_sort(struct list_head *head, bool descend) {}
+void q_sort(struct list_head *head, bool descend)
+{
+    if (!head || list_empty(head) || list_is_singular(head))
+        return;
+    struct list_head *slow = head;
+    struct list_head *fast = head->next;
+    for (; fast != head && fast->next != head; fast = fast->next->next)
+        slow = slow->next;
+    struct list_head left;
+    list_cut_position(&left, head, slow);
+    q_sort(&left, descend);
+    q_sort(head, descend);
+    mergeTwoLists(head, &left, descend);
+}
 
 /* Remove every node which has a node with a strictly less value anywhere to
  * the right side of it */
@@ -247,6 +277,32 @@ int q_descend(struct list_head *head)
  * order */
 int q_merge(struct list_head *head, bool descend)
 {
-    // https://leetcode.com/problems/merge-k-sorted-lists/
-    return 0;
+    if (!head || list_empty(head))
+        return 0;
+    queue_contex_t *entry, *safe;
+    queue_contex_t *first_qctx = list_entry(head->next, queue_contex_t, chain);
+    bool first = true;
+    int sz = q_size(first_qctx->q);
+    element_t *e1, *e2;
+    list_for_each_entry_safe (entry, safe, head, chain) {
+        if (first) {
+            first = false;
+            continue;
+        }
+        sz += q_size(entry->q);
+        LIST_HEAD(tmp_head);
+        while (!list_empty(first_qctx->q) && !list_empty(entry->q)) {
+            e1 = list_entry(first_qctx->q->next, element_t, list);
+            e2 = list_entry(entry->q->next, element_t, list);
+            struct list_head *node = !(cmp(e1->value, e2->value) ^ descend)
+                                         ? first_qctx->q->next
+                                         : entry->q->next;
+            list_del_init(node);
+            list_add_tail(node, &tmp_head);
+        }
+        list_splice_tail_init(
+            (list_empty(first_qctx->q) ? entry->q : first_qctx->q), &tmp_head);
+        list_splice(&tmp_head, first_qctx->q);
+    }
+    return sz;
 }
