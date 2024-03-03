@@ -201,7 +201,6 @@ static void init_once(void)
 {
     init_dut();
     for (int i = 0; i < DUDECT_TESTS; i++) {
-        t[i] = calloc(1, sizeof(t_context_t));
         t_init(t[i]);
     }
 }
@@ -210,7 +209,7 @@ static bool test_const(char *text, int mode)
 {
     bool result = false;
     for (int i = 0; i < DUDECT_TESTS; i++) {
-        t[i] = calloc(1, sizeof(t_context_t));
+        t[i] = malloc(sizeof(t_context_t));
         t_init(t[i]);
     }
     percentiles = calloc(DUDECT_NUMBER_PERCENTILES, sizeof(int64_t));
