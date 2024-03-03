@@ -195,23 +195,21 @@ void q_reverseK(struct list_head *head, int k)
     if (!head || list_empty(head) || list_is_singular(head)) {
         return;
     }
-    struct list_head *tmp_head = q_new();
-    struct list_head *reverse_head = q_new();
-    struct list_head *node;
-    int cnt;
-    for (cnt = 0, node = head->next; node != head;) {
+    LIST_HEAD(tmp_head);
+    LIST_HEAD(reverse_head);
+    struct list_head *node, *safe;
+    int cnt = 1;
+    list_for_each_safe (node, safe, head) {
         if (cnt == k) {
-            node = node->next;
-            cnt = 0;
-            list_cut_position(reverse_head, head, node->prev);
-            q_reverse(reverse_head);
-            list_splice_tail(tmp_head, reverse_head);
-            continue;
+            list_cut_position(&reverse_head, head, node);
+            q_reverse(&reverse_head);
+            list_splice_tail_init(&reverse_head, &tmp_head);
+            cnt = 1;
+        } else {
+            cnt++;
         }
-        node = node->next;
-        cnt++;
     }
-    list_splice(tmp_head, head);
+    list_splice(&tmp_head, head);
 }
 
 /**
@@ -257,20 +255,45 @@ void q_sort(struct list_head *head, bool descend)
     mergeTwoLists(head, &left, descend);
 }
 
+int remove_nodes(struct list_head *head, bool descend)
+{
+    if (!head || list_empty(head))
+        return 0;
+    if (list_is_singular(head))
+        return 1;
+    element_t *entry, *safe;
+    LIST_HEAD(tmp_head);
+    list_for_each_entry_safe (entry, safe, head, list) {
+        if (list_empty(&tmp_head)) {
+            list_move_tail(&entry->list, &tmp_head);
+        } else {
+            element_t *e = list_last_entry(&tmp_head, element_t, list);
+            while (!list_empty(&tmp_head) &&
+                   (cmp(e->value, entry->value) ^ descend)) {
+                list_del(&e->list);
+                free(e->value);
+                free(e);
+                e = list_last_entry(&tmp_head, element_t, list);
+            }
+            list_move_tail(&entry->list, &tmp_head);
+        }
+    }
+    list_splice_tail(&tmp_head, head);
+    return q_size(head);
+}
+
 /* Remove every node which has a node with a strictly less value anywhere to
  * the right side of it */
 int q_ascend(struct list_head *head)
 {
-    // https://leetcode.com/problems/remove-nodes-from-linked-list/
-    return 0;
+    return remove_nodes(head, false);
 }
 
 /* Remove every node which has a node with a strictly greater value anywhere to
  * the right side of it */
 int q_descend(struct list_head *head)
 {
-    // https://leetcode.com/problems/remove-nodes-from-linked-list/
-    return 0;
+    return remove_nodes(head, true);
 }
 
 /* Merge all the queues into one sorted queue, which is in ascending/descending
