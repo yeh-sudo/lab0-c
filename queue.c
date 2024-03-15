@@ -213,9 +213,8 @@ void q_reverseK(struct list_head *head, int k)
 }
 
 /**
- * if s1 == s2: return 0
- * if s1 > s2: return positive
- * if s1 < s2: return negative
+ * if s1 > s2: return true
+ * if s1 <= s2: return false
  */
 bool cmp(const char *s1, const char *s2)
 {
