@@ -8,3 +8,8 @@ void timsort(void *priv,
              struct list_head *head,
              list_cmp_func_t cmp,
              bool descend);
+
+void list_sort(void *priv,
+               struct list_head *head,
+               list_cmp_func_t,
+               bool descend);
