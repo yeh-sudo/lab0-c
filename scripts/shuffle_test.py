@@ -2,7 +2,6 @@ import subprocess
 import re
 import random
 from itertools import permutations
-import random
 import matplotlib.pyplot as plt
 import numpy as np
 

@@ -19,6 +19,7 @@
 #include <time.h>
 #endif
 
+#include "dudect/cpucycles.h"
 #include "dudect/fixture.h"
 #include "list.h"
 #include "random.h"
@@ -1040,8 +1041,14 @@ bool do_timsort(int argc, char *argv[])
     error_check();
 
     set_noallocate_mode(true);
-    if (current && exception_setup(true))
-        timsort(NULL, current->q, compare, descend);
+    int count = 0;
+    int64_t before_ticks, after_ticks, exec_ticks;
+    if (current && exception_setup(true)) {
+        before_ticks = cpucycles();
+        timsort(&count, current->q, compare, descend);
+        after_ticks = cpucycles();
+        exec_ticks = after_ticks - before_ticks;
+    }
     exception_cancel();
     set_noallocate_mode(false);
 
@@ -1068,6 +1075,11 @@ bool do_timsort(int argc, char *argv[])
     }
 
     q_show(3);
+
+    printf("==== Testing Timsort ====\n");
+    printf("  Timsort comparisons: %d\n", count);
+    printf("  Timsort cpucycles: %ld\n", exec_ticks);
+
     return ok && !error_check();
 }
 
@@ -1090,8 +1102,14 @@ bool do_listsort(int argc, char *argv[])
     error_check();
 
     set_noallocate_mode(true);
-    if (current && exception_setup(true))
-        list_sort(NULL, current->q, compare, descend);
+    int count = 0;
+    int64_t before_ticks, after_ticks, exec_ticks;
+    if (current && exception_setup(true)) {
+        before_ticks = cpucycles();
+        list_sort(&count, current->q, compare, descend);
+        after_ticks = cpucycles();
+        exec_ticks = after_ticks - before_ticks;
+    }
     exception_cancel();
     set_noallocate_mode(false);
 
@@ -1118,6 +1136,11 @@ bool do_listsort(int argc, char *argv[])
     }
 
     q_show(3);
+
+    printf("==== Testing list_sort ====\n");
+    printf("  list_sort comparisons: %d\n", count);
+    printf("  list_sort cpucycles: %ld\n", exec_ticks);
+
     return ok && !error_check();
 }
 
@@ -1130,13 +1153,73 @@ bool do_shuffle(int argc, char *argv[])
     error_check();
 
     if (current && exception_setup(true)) {
-        // TODO: Shuffle
         shuffle(current->q);
     }
     exception_cancel();
 
     q_show(3);
     return !error_check();
+}
+
+bool do_mergesort(int argc, char *argv[])
+{
+    if (argc != 1) {
+        report(1, "%s takes no arguments", argv[0]);
+        return false;
+    }
+
+    int cnt = 0;
+    if (!current || !current->q)
+        report(3, "Warning: Calling merge sort on null queue");
+    else
+        cnt = q_size(current->q);
+    error_check();
+
+    if (cnt < 2)
+        report(3, "Warning: Calling merge sort on single node");
+    error_check();
+
+    set_noallocate_mode(true);
+    int count = 0;
+    int64_t before_ticks, after_ticks, exec_ticks;
+    if (current && exception_setup(true)) {
+        before_ticks = cpucycles();
+        merge_sort(&count, current->q, compare, descend);
+        after_ticks = cpucycles();
+        exec_ticks = after_ticks - before_ticks;
+    }
+    exception_cancel();
+    set_noallocate_mode(false);
+
+    bool ok = true;
+    if (current && current->size) {
+        for (struct list_head *cur_l = current->q->next;
+             cur_l != current->q && --cnt; cur_l = cur_l->next) {
+            /* Ensure each element in ascending/descending order */
+            element_t *item, *next_item;
+            item = list_entry(cur_l, element_t, list);
+            next_item = list_entry(cur_l->next, element_t, list);
+            if (!descend && strcmp(item->value, next_item->value) > 0) {
+                report(1, "ERROR: Not sorted in ascending order");
+                ok = false;
+                break;
+            }
+
+            if (descend && strcmp(item->value, next_item->value) < 0) {
+                report(1, "ERROR: Not sorted in descending order");
+                ok = false;
+                break;
+            }
+        }
+    }
+
+    q_show(3);
+
+    printf("==== Testing merge sort ====\n");
+    printf("  merge sort comparisons: %d\n", count);
+    printf("  merge sort cpucycles: %ld\n", exec_ticks);
+
+    return ok && !error_check();
 }
 
 static void console_init()
@@ -1183,6 +1266,7 @@ static void console_init()
     ADD_COMMAND(listsort, "Sort the queue with list_sort", "");
     ADD_COMMAND(shuffle,
                 "Shuffle all the nodes in queue with Fisher-Yates shuffle", "");
+    ADD_COMMAND(mergesort, "Sort the queue with list_sort", "");
     add_param("length", &string_length, "Maximum length of displayed string",
               NULL);
     add_param("malloc", &fail_probability, "Malloc failure probability percent",
