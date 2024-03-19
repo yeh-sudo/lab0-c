@@ -47,6 +47,7 @@ extern int show_entropy;
 
 #include "console.h"
 #include "report.h"
+#include "shuffle.h"
 
 /* Settable parameters */
 
@@ -1079,13 +1080,13 @@ bool do_listsort(int argc, char *argv[])
 
     int cnt = 0;
     if (!current || !current->q)
-        report(3, "Warning: Calling Timsort on null queue");
+        report(3, "Warning: Calling list_sort on null queue");
     else
         cnt = q_size(current->q);
     error_check();
 
     if (cnt < 2)
-        report(3, "Warning: Calling Timsort on single node");
+        report(3, "Warning: Calling list_sort on single node");
     error_check();
 
     set_noallocate_mode(true);
@@ -1118,6 +1119,24 @@ bool do_listsort(int argc, char *argv[])
 
     q_show(3);
     return ok && !error_check();
+}
+
+bool do_shuffle(int argc, char *argv[])
+{
+    if (!current || !current->q) {
+        report(3, "Warning: Calling shuffle on null queue");
+        return false;
+    }
+    error_check();
+
+    if (current && exception_setup(true)) {
+        // TODO: Shuffle
+        shuffle(current->q);
+    }
+    exception_cancel();
+
+    q_show(3);
+    return !error_check();
 }
 
 static void console_init()
@@ -1162,6 +1181,8 @@ static void console_init()
                 "[K]");
     ADD_COMMAND(timsort, "Sort the queue with Timsort", "");
     ADD_COMMAND(listsort, "Sort the queue with list_sort", "");
+    ADD_COMMAND(shuffle,
+                "Shuffle all the nodes in queue with Fisher-Yates shuffle", "");
     add_param("length", &string_length, "Maximum length of displayed string",
               NULL);
     add_param("malloc", &fail_probability, "Malloc failure probability percent",
