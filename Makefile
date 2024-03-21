@@ -37,7 +37,7 @@ $(GIT_HOOKS):
 	@scripts/install-git-hooks
 	@echo
 
-OBJS := qtest.o report.o console.o harness.o queue.o timsort.o list_sort.o shuffle.o merge_sort.o \
+OBJS := qtest.o report.o console.o harness.o queue.o timsort.o list_sort.o shuffle.o merge_sort.o quick_sort.o \
         random.o dudect/constant.o dudect/fixture.o dudect/ttest.o \
         shannon_entropy.o \
         linenoise.o web.o

@@ -22,7 +22,7 @@ timsort
 reverse
 timsort
 free
-descend
+option descend 1
 new
 ih RAND 10000
 timsort

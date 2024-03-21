@@ -19,6 +19,7 @@ CPPCHECK_suppresses="--inline-suppr harness.c \
 --suppress=nullPointer:timsort.c \
 --suppress=nullPointer:list_sort.c \
 --suppress=nullPointer:merge_sort.c \
+--suppress=nullPointer:quick_sort.c \
 --suppress=returnDanglingLifetime:report.c \
 --suppress=constParameterCallback:console.c \
 --suppress=constParameterPointer:console.c \
